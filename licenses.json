@@ -1,0 +1,65 @@
+{
+  "customers": [
+    {
+      "id": "cust_6jyub540gnyp",
+      "name": "a",
+      "email": "cenigi5927@elygifts.com",
+      "licenseKey": "LIC-0KEZ-05WH-0JKN-0N0T",
+      "status": "active",
+      "maxDevices": 2,
+      "createdAt": "2025-10-29T11:15:01.524Z",
+      "expiresAt": "2027-04-29T11:15:01.524Z",
+      "activations": [
+        {
+          "deviceId": "87860527-6414-4337-9cda-b01b7959c519",
+          "activatedAt": "2025-10-29T11:15:39.441Z",
+          "lastSeen": "2025-10-29T18:00:12.276Z"
+        },
+        {
+          "deviceId": "c1235ad8-3022-4cc8-b8fe-1cc2446c4af2",
+          "activatedAt": "2025-10-29T12:08:57.121Z",
+          "lastSeen": "2025-10-29T12:53:39.738Z"
+        }
+      ]
+    },
+    {
+      "id": "cust_k2xjuyqhc8fx",
+      "name": "j",
+      "email": "jb",
+      "licenseKey": "LIC-00OX-0N3T-0QYA-0760",
+      "status": "banned",
+      "maxDevices": 2,
+      "createdAt": "2025-10-29T12:12:18.933Z",
+      "expiresAt": "2026-04-29T12:12:18.933Z",
+      "activations": [
+        {
+          "deviceId": "2bd574f5-7519-46e2-882d-f8c5d091f0c5",
+          "activatedAt": "2025-10-29T12:13:07.276Z",
+          "lastSeen": "2025-10-29T12:49:35.118Z"
+        },
+        {
+          "deviceId": "e3d22823-f8b7-4df0-91ea-225de882b623",
+          "activatedAt": "2025-10-29T17:35:52.135Z",
+          "lastSeen": "2025-10-29T17:37:43.495Z"
+        }
+      ]
+    },
+    {
+      "id": "cust_xsohyckx1swy",
+      "name": "e",
+      "email": "e",
+      "licenseKey": "LIC-0H4B-06WF-0ZAJ-0VAY",
+      "status": "active",
+      "maxDevices": 2,
+      "createdAt": "2025-10-29T17:37:49.302Z",
+      "expiresAt": "2026-04-29T17:37:49.302Z",
+      "activations": [
+        {
+          "deviceId": "e3d22823-f8b7-4df0-91ea-225de882b623",
+          "activatedAt": "2025-10-29T17:37:58.886Z",
+          "lastSeen": "2025-10-29T17:42:43.586Z"
+        }
+      ]
+    }
+  ]
+}
