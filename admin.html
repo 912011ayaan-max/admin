@@ -8,7 +8,7 @@
     :root { --bg:#0b1020; --card:#121a2f; --muted:#93a4c4; --accent:#4f7cff; --text:#e8eefc; }
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif; background:var(--bg); color:var(--text); }
     header { position:sticky; top:0; background:#0c1428cc; backdrop-filter:saturate(140%) blur(8px); border-bottom:1px solid #1f2a44; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
-    .container { max-width:1000px; margin:20px auto; padding:0 16px; }
+    .container { max-width:1100px; margin:20px auto; padding:0 16px; }
     .card { background:var(--card); border:1px solid #1f2a44; border-radius:12px; padding:16px; margin-bottom:16px; }
     .row { display:flex; gap:12px; flex-wrap:wrap; }
     .row > * { flex:1 1 240px; }
@@ -21,12 +21,11 @@
     .status.active { background:#16321f; color:#9ae6b4; border:1px solid #1f5a33; }
     .status.banned { background:#381e1e; color:#feb2b2; border:1px solid #5a2a2a; }
     .status.expired { background:#3a2b14; color:#fbd38d; border:1px solid #5f451f; }
-    .grid { display:grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap:12px; }
-    @media (min-width: 720px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .hidden { display:none; }
+    code { color:#c7d5f2; }
   </style>
   <script>
-    // Determine API base: URL param (?api=), localStorage ('admin_api_base'), or sensible default
+    // Configure API base from ?api= param or saved setting
     (function(){
       const params = new URLSearchParams(window.location.search);
       const apiParam = params.get('api');
@@ -34,62 +33,58 @@
         try {
           const u = new URL(apiParam);
           localStorage.setItem('admin_api_base', `${u.origin}${u.pathname.replace(/\/$/, '')}`);
-        } catch (e) {
-          console.warn('Invalid api param:', apiParam);
-        }
+        } catch (e) { console.warn('Invalid api param:', apiParam); }
       }
     })();
 
     const savedApi = localStorage.getItem('admin_api_base');
     const isHttpsPage = window.location.protocol === 'https:';
     const defaultApi = isHttpsPage ? `${window.location.origin}/api` : 'http://localhost:3001/api';
-    const API_BASE = (savedApi || defaultApi).replace(/\/$/, '');
+    let API_BASE = (savedApi || defaultApi).replace(/\/$/, '');
 
-    if (isHttpsPage && API_BASE.startsWith('http://')) {
-      console.warn('Admin page is HTTPS but API is HTTP; browser will block mixed content. Use an HTTPS API endpoint.');
+    function setApiBase(v) {
+      try {
+        const u = new URL(v);
+        API_BASE = `${u.origin}${u.pathname.replace(/\/$/, '')}`;
+        localStorage.setItem('admin_api_base', API_BASE);
+        alert('API base updated');
+      } catch(e) { alert('Invalid API URL'); }
     }
 
-    const ADMIN_PASSWORD = ''; // Optional: store here to auto-fill, otherwise you'll be prompted
-
+    // Admin password is stored in localStorage
     function authHeader() {
-      const pw = ADMIN_PASSWORD || localStorage.getItem('ADMIN_PASSWORD') || '';
+      const pw = localStorage.getItem('ADMIN_PASSWORD') || '';
       return pw ? { 'X-Admin-Auth': pw } : {};
     }
-
     async function requirePassword() {
-      if (ADMIN_PASSWORD) return;
-      let pw = localStorage.getItem('ADMIN_PASSWORD');
-      if (!pw) {
-        pw = prompt('Enter admin password');
-        if (!pw) return alert('Admin password required');
-        localStorage.setItem('ADMIN_PASSWORD', pw);
-      }
+      const pw = localStorage.getItem('ADMIN_PASSWORD');
+      if (!pw) { alert('Set admin password in the header and click Save PW.'); return false; }
+      return true;
     }
 
     async function createCustomer(ev) {
       ev.preventDefault();
-      await requirePassword();
+      if (!(await requirePassword())) return;
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
       const months = parseInt(document.getElementById('months').value || '6', 10);
       const maxDevices = parseInt(document.getElementById('maxDevices').value || '2', 10);
       if (!name || !email) return alert('Name and email required');
       const res = await fetch(`${API_BASE}/customers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ name, email, months, maxDevices })
       });
-      if (!res.ok) return alert('Create failed');
-      const data = await res.json();
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok) return alert(data.error || 'Create failed');
       alert(`License created: ${data.licenseKey}`);
       listCustomers();
     }
 
     async function listCustomers() {
-      await requirePassword();
+      if (!(await requirePassword())) return;
       const res = await fetch(`${API_BASE}/customers`, { headers: { ...authHeader() } });
+      const data = await res.json().catch(()=>({ customers: [] }));
       if (!res.ok) return alert('Load customers failed');
-      const data = await res.json();
       const tbody = document.getElementById('customersBody');
       tbody.innerHTML = '';
       for (const c of data.customers) {
@@ -99,15 +94,15 @@
           <td><code>${c.licenseKey}</code></td>
           <td><span class="status ${c.status}">${c.status}</span></td>
           <td>${new Date(c.expiresAt).toLocaleString()}</td>
-          <td>${c.activations?.length || 0} / ${c.maxDevices}</td>
+          <td>${(c.activations?.length || 0)} / ${c.maxDevices}</td>
           <td>
             <div class="row" style="gap:8px;">
               <button onclick="copyText('${c.licenseKey}')">Copy</button>
               <button class="secondary" onclick="renew('${c.id}', 3)">+3m</button>
               <button class="secondary" onclick="renew('${c.id}', 6)">+6m</button>
-              ${c.status === 'banned' ?
-                `<button onclick="toggleBan('${c.id}', false)">Unban</button>` :
-                `<button onclick="toggleBan('${c.id}', true)">Ban</button>`}
+              ${c.status === 'banned'
+                ? `<button onclick=\"toggleBan('${c.id}', false)\">Unban</button>`
+                : `<button onclick=\"toggleBan('${c.id}', true)\">Ban</button>`}
             </div>
           </td>
         `;
@@ -116,10 +111,9 @@
     }
 
     async function renew(id, months) {
-      await requirePassword();
+      if (!(await requirePassword())) return;
       const res = await fetch(`${API_BASE}/customers/${id}/renew`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ months })
       });
       if (!res.ok) return alert('Renew failed');
@@ -127,10 +121,9 @@
     }
 
     async function toggleBan(id, banned) {
-      await requirePassword();
+      if (!(await requirePassword())) return;
       const res = await fetch(`${API_BASE}/customers/${id}/ban`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ banned })
       });
       if (!res.ok) return alert('Ban/unban failed');
@@ -147,6 +140,17 @@
     }
 
     window.addEventListener('load', () => {
+      // Wire header controls
+      const apiInput = document.getElementById('apiBase');
+      apiInput.value = API_BASE;
+      document.getElementById('saveApi').addEventListener('click', () => setApiBase(apiInput.value.trim()));
+      const pwInput = document.getElementById('adminPw');
+      pwInput.value = localStorage.getItem('ADMIN_PASSWORD') || '';
+      document.getElementById('savePw').addEventListener('click', () => {
+        localStorage.setItem('ADMIN_PASSWORD', pwInput.value.trim());
+        alert('Admin password saved');
+      });
+
       listCustomers();
       document.getElementById('createForm').addEventListener('submit', createCustomer);
     });
@@ -156,7 +160,11 @@
 <body>
   <header>
     <div style="font-weight:700;">License Admin</div>
-    <div style="display:flex; gap:8px;">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input id="apiBase" placeholder="https://api.yourdomain.com/api" style="width:320px;" />
+      <button class="secondary" id="saveApi">Save API</button>
+      <input id="adminPw" placeholder="Admin password" type="password" style="width:200px;" />
+      <button class="secondary" id="savePw">Save PW</button>
       <button class="secondary" onclick="localStorage.removeItem('ADMIN_PASSWORD'); alert('Password cleared. Reload to re-enter.');">Logout</button>
     </div>
   </header>
